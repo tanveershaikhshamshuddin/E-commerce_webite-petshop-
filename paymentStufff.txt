@@ -1,0 +1,676 @@
+//----------CheckOutStepper---------//
+import { Box, Button, Card, CardContent, CircularProgress, Grid, Step, StepLabel, Stepper } from '@material-ui/core';
+import { Field, Form, Formik, FormikConfig, FormikValues } from 'formik';
+import { CheckboxWithLabel, TextField } from 'formik-material-ui';
+import React, { useState } from 'react';
+import {string,object,number} from 'yup';
+import FormikControl from './productManagement/FormikControl';
+import { useDispatch ,useSelector} from 'react-redux';
+import { createOrder } from '../actions/cartActions';
+import StripeCheckout from 'react-stripe-checkout';
+import Axios from 'axios';
+
+export interface CheckOutStepperProps{
+  total:number,
+  cartItems:string,
+  user_name:string,
+  user_email:string,
+  id:string,
+  /*
+   *total Actual amount with tax function 
+   * 
+  */
+}
+
+export default function CheckOutStepper(props:CheckOutStepperProps) {
+    const dispatch=useDispatch();
+    
+    const validationSchemaLogin=object({
+        name:string().required("Required !"),
+        email:string().email("Invalid email address").required("Required !"),      
+    });
+    const validationSchemaAddress=object({
+        line1:string().required("Required !"),
+        line2:string().required("Required !"),
+        city:string().required("Required !"),
+        postal_code:number().typeError("postal code must be a number")
+        .required("Required !"),
+        country:string().required("Required"),
+        state:string().required("Required")  
+    });
+    const validationPaymentMethod=object({
+        payment_method:string().required("Payment method is required")
+    });
+    const [token,setToken]=useState({})
+    const [online,setOnline]=useState(false);
+    const payment_options=[
+      {key:"Stripe",value:"Stripe"},
+      {key:"Cash on delivery",value:"Cash on delivery"}
+    ]
+
+    const makePayment=()=>{
+      console.log()
+      dispatch(createOrder(token));
+    }
+    
+    const OfflinePayHandler=()=>{
+      const order=token;
+      dispatch(createOrder(order));
+    }
+  return (
+      <CardContent>
+        <FormikStepper
+          initialValues={{
+            name:props.user_name || "",
+            email:props.user_email || "",
+            line1:"",
+            line2:"",
+            city:"",
+            postal_code:"",
+            state:"",
+            country:"",
+            payment_method:""
+          }}
+          onSubmit={(values) => {
+            const {line1,line2,city,postal_code,state,country,name,email,payment_method}=values
+            const address=`${line1} ${line2} ${city} ${postal_code} ${state} ${country}`;
+            const cartOrderItems=JSON.parse(props.cartItems);
+            const order={
+              o_customer_id:props.id,
+              o_customer_name:name,
+              o_customer_email:email,
+              o_shipping_addr:address,
+              o_total:props.total,
+              o_cartItems:cartOrderItems,
+              o_payment_method:payment_method
+            }
+              console.log(order);
+              if(payment_method==="Stripe"){
+                setOnline(true);
+              }else{
+                setOnline(false);
+              }
+              setToken(order);
+          }}
+        >
+
+                <FormikStep label="Personal Details"
+                    validationSchema={validationSchemaLogin}
+                >
+                <Box paddingBottom={2}>
+                <Field name="name" fullWidth component={TextField} label="Enter your name" />
+                </Box>
+                <Box paddingBottom={2}>
+                <Field name="email" fullWidth component={TextField} label="Enter your email"/>
+                </Box>
+                </FormikStep>
+
+                <FormikStep label="Shipping Address"
+                validationSchema={validationSchemaAddress}
+                >     
+                <Box paddingBottom={2}>
+                <Field name="line1" fullWidth component={TextField} label="Enter your address line 1"/>
+                </Box>
+                <Box paddingBottom={2}>
+                <Field name="line2" fullWidth component={TextField} label="Enter your address line 2"/>
+                </Box>
+
+                <Box paddingBottom={2}>
+                <Field name="city" component={TextField} label="Enter your city"/>
+                </Box>
+                <Box paddingBottom={2}>
+                <Field name="postal_code" component={TextField} label="Enter your postal code"/>
+                </Box>
+                <Box paddingBottom={2}>
+                <Field name="state"  component={TextField} label="Enter your state"/>
+                </Box>
+                <Box paddingBottom={2}>
+                <Field name="country"  component={TextField} label="Enter your country"/>
+                </Box>
+                </FormikStep>
+
+                <FormikStep label="Choose Payment Method"
+                validationSchema={validationPaymentMethod}>
+                  <Box>
+                     
+                  <FormikControl
+                  control="radio"
+                  name="payment_method"
+                  label="Select payment method"
+                  options={payment_options}
+                  
+                  />
+                    </Box>
+                </FormikStep>
+
+                <FormikStep label="Payment">
+                  <Box>
+                            {
+                              online===true?
+                              
+                              <StripeCheckout 
+                                stripeKey="pk_test_51HgpgoHSKx3urDTGUaBvfyEy73S4c1smnLvP2eFM03fhKm1ilx3t5I8P0Jz86Z3YivJFdr6s4zAL3Jq7sZzcckxe002AbNWFEE"
+                                token={makePayment}
+                                name="Buy React"
+                                amount={props.total}
+                                >
+                            <button className="btn btn-primary shadow" style={{borderRadius:"2rem"}}>Stripe Payment</button>
+                          </StripeCheckout>
+                            :            
+                          <Button
+                          className="mt-2 shadow"
+                          style={{borderRadius:"1.3rem",outline:"none",outlineColor:"none",border:"none",fontFamily:"'Times New Roman' Times sanserif"}}
+                          variant="contained"
+                          color="secondary"
+                          type="button"
+                          onClick={OfflinePayHandler}
+                        >
+                          Place Order
+                        </Button>
+                            }
+                  </Box>
+                </FormikStep>
+        </FormikStepper>
+        
+      </CardContent>
+  );
+}
+
+export interface FormikStepProps
+  extends Pick<FormikConfig<FormikValues>, 'children' | 'validationSchema'> {
+  label: string;
+}
+
+export function FormikStep({ children }: FormikStepProps) {
+  return <>{children}</>;
+}
+
+export function FormikStepper({ children, ...props }: FormikConfig<FormikValues>) {
+  const childrenArray = React.Children.toArray(children) as React.ReactElement<FormikStepProps>[];
+  const [step, setStep] = useState(0);
+  const currentChild = childrenArray[step];
+  const [completed, setCompleted] = useState(false);
+
+  function isLastStep() {
+    return step === childrenArray.length - 1;
+  }
+  function isSecondLastStep(){
+    return step === childrenArray.length - 2;
+  }
+  return (
+    <Formik
+      {...props}
+      validationSchema={currentChild.props.validationSchema}
+      onSubmit={async (values, helpers) => {
+        if (isLastStep()) {
+          await props.onSubmit(values, helpers);
+          setCompleted(true);
+        } else {
+          setStep((s) => s + 1);
+        }
+      }}
+    >
+      {({ isSubmitting }) => (
+        <Form autoComplete="off">
+          <Stepper alternativeLabel activeStep={step}>
+            {childrenArray.map((child, index) => (
+              <Step key={child.props.label} completed={step > index || completed}>
+                <StepLabel>{child.props.label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          {currentChild}
+
+          <Grid container spacing={2}>
+            {step > 0 ? (
+              <Grid item>
+                <Button
+                  className="mt-2 shadow-lg"
+                  style={{borderRadius:"1.3rem",outline:"none",outlineColor:"none",border:"none",fontFamily:"'Times New Roman' Times sanserif"}}
+                  disabled={isSubmitting}
+                  variant="contained"
+                  color="primary"
+                  onClick={() => setStep((s) => s - 1)}
+                >
+                  Back
+                </Button>
+              </Grid>
+            ) : null}
+            <Grid item>
+              {!isSecondLastStep() && !isLastStep()  &&
+              <Button
+              className="mt-2 shadow"
+              style={{borderRadius:"1.3rem",outline:"none",outlineColor:"none",border:"none",fontFamily:"'Times New Roman' Times sanserif"}}
+              variant="contained"
+              color="secondary"
+              type="button"
+              onClick={() => setStep((s) => s + 1)}
+            >
+              {isSubmitting ? 'Submitting': 'Next'}
+            </Button>
+              }
+              {isSecondLastStep() && <Button
+                className="m-1 mt-2 shadow"
+                style={{borderRadius:"1.3rem",outline:"none",outlineColor:"none",border:"none",fontFamily:"'Times New Roman' Times sanserif"}}
+                startIcon={isSubmitting ? <CircularProgress size="1rem" /> : null}
+                disabled={isSubmitting}
+                type="submit"
+                variant="contained"
+                onClick={() => setStep((s) => s + 1)}
+                color="secondary"
+              >
+                {isSubmitting ? 'Submitting' : "Submit"}
+              </Button>
+              }
+
+
+            </Grid>
+          </Grid>
+        </Form>
+      )}
+    </Formik>
+  );
+}
+
+
+//-------------CartScreen--------------//
+import { BorderBottom, HighlightOff, Receipt } from '@material-ui/icons';
+import React, { useEffect, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux';
+import {useHistory} from "react-router-dom";
+import CartItem from './CartItem';
+import Fade from "react-reveal/Fade";
+import Zoom from "react-reveal/Zoom"
+import "./CartScreen.css";
+import CheckOutStepper from './CheckOutStepper';
+import Modal from "react-modal";
+import { Card } from '@material-ui/core';
+import { clearOrder } from '../actions/cartActions';
+function CartScreen() {
+    const cart=useSelector(state=>state.cart);
+    const {cartItems}=cart
+    const [total,setTotal]=useState(0);
+    const dispatch=useDispatch();
+
+    const closeModal=()=>{
+      dispatch(clearOrder())
+    }
+
+
+
+    const orders=useSelector(state=>state.order);
+    const {order,order_error}=orders;
+
+
+    const history=useHistory();
+    const userSignin=useSelector(state=>state.userSignin);
+    const {loading,userInfo,error}=userSignin
+
+    const [islogin,setIsLogin]=useState(false);
+
+    function calTotal(){
+      const amount=cartItems.reduce((a,c)=> a+c.p_price*c.count,0);
+      const tax=0.15;
+      const Total=amount+(tax*amount)
+      setTotal(Total)
+    }
+
+    useEffect(() => {
+      calTotal();
+    }, [cartItems]);
+
+    useEffect(() => {
+      if(order_error){
+        console.log("Error While giving Order :",order_error);
+      }else{
+        if(order){
+          console.log("Order Details :",order);
+        }
+      }
+    }, [order])
+
+    const handleCheckOut=()=>{
+      if(userInfo){
+        setIsLogin(true);
+      }else{
+        setIsLogin(false);
+        history.push("/signin")
+      }
+      console.log("All Cart Items :",cartItems);
+    }
+    return (
+        <div>         
+    <div className="container-fluid mt-1">    
+<section>
+    <div className="row">
+      
+      <div className="col-lg-8 ">
+        
+        <div className="card wish-list mb-3 shadow">
+          <div className="card-body">
+  
+            {
+                cartItems.length!==0?(
+                    <h5 className="mb-4">Cart is Empty</h5>
+                ):(
+                    <h5 className="mb-4">Cart (<span>{cartItems.length}</span> items)</h5>
+
+                )
+            }
+            {
+              order && <Modal isOpen={true}
+              onRequestClose={closeModal}
+              >
+                  <Zoom>
+          <div className="container-fluid" id="receipt">
+            <h2 className="mt-2 col-12 text-light p-3" style={{backgroundColor:"purple"}} >Exotic pets World
+            <button className="menu_close_btn float-left text-light" 
+            style={{border:"none",position:"absolute",right:"2rem",fontSize:"1.3rem",backgroundColor:"transparent"}} 
+            onClick={closeModal}>
+              <HighlightOff className="sidebar_icon"/>
+              </button></h2>
+
+            <p className="card col-12 mt-2"><h4>Payment Mode</h4>{order.o_payment_method}</p>            
+            <p className="card col-12 mt-2"><h4>Shipping Address</h4>{order.o_shipping_addr}</p>            
+            <table className="table mt-2 table-hover">
+              <thead className="bg-primary text-light">
+                <tr>
+                  <th></th>
+                  <th>PRODUCT NAME</th>
+                  <th>PRODUCT PRICE</th>
+                  <th>PRODUCT QUANTITY</th>
+                  <th>PRODUCT TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {
+                  order.o_cartItems.map((item,index)=>(
+                    <>
+                    <tr>
+                  <td>{index}</td>
+                  <td>{item.p_name}</td>
+                  <td>{item.p_price}</td>
+                  <td>{item.count}</td>
+                  <td>{item.p_price *item.count}</td>
+                    </tr>
+                    </>
+                  ))
+                }
+              </tbody>
+            </table>
+
+            <div className="p-2 mt-2 card">
+              
+            <div className="subtotal p-2" >
+              <strong>Subtotal : ${order.o_cartItems.reduce((a,c)=>a+c.p_price*c.count,0)}{""}</strong>
+            </div>
+            <div className="sales-tax">
+              <strong>Tax included : 15%</strong>
+            </div>
+            <div className="total">
+              <h5 className="total"><strong>
+                Total amount with 15% Tax : ${order.o_total}
+                </strong></h5>
+            </div>
+            <div className="card p-2 mt-2">
+              <h5 className="text-danger"><strong>ORDER ID :- {order._id}</strong></h5>
+            </div>
+            <div>
+              <button className="btn btn-primary shadow" id="receiptbtn" style={{borderRadius:"1.5rem",margin:"1rem",positon:"relative",float:"right"}} >Download Receipt</button>
+            </div>
+            </div>
+          </div>
+                  </Zoom> 
+              </Modal>
+            }
+            <hr/>
+            {
+                cartItems.map((item,index)=>(
+                  <Fade right  delay={1300}>
+                  <div className="row mb-4" key={index} style={{BorderBottom:"2px solid lightgray"}}>
+                    <CartItem product={item}/>
+                    <hr/>
+                    </div>
+                    </Fade>
+                )
+                )  
+                
+            }
+            
+
+          </div>
+        </div>
+        
+      </div>
+
+{
+    cartItems.length!==0 && (
+      <div className="col-lg-4">
+      <div className="card mb-3 shadow" >
+        <div className="card-body">
+          <h5 className="mb-3">Summary of Cart</h5>
+          <hr/>
+          <Fade bottom cascade>
+          <ul className="list-group list-group-flush" style={{color:"purple",fontSize:"0.95rem",fontFamily:"'Times New Roman', Times, serif"}}>
+            {
+              cartItems.map((item,index)=>(
+                <li class="list-group-item d-flex justify-content-between align-items-center" key={index}>
+                {item.p_name} ({item.count})x(${item.p_price})
+                <span class="badge badge-warning badge-pill">${item.count * item.p_price}</span>
+              </li>
+              ))
+            }
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              Total amount :              
+          <span> {            
+            <span className="badge badge-primary badge-pill"> ${             
+              (cartItems.reduce((a,c)=> a+c.p_price*c.count,0)).toString()
+            }</span>              
+          }
+          </span>         
+            </li>
+          </ul>
+          </Fade>
+          <button type="button" 
+          onClick={handleCheckOut}
+           className="btn mt-3 shadow w-100 text-light"
+            style={{borderRadius:"1rem",backgroundColor:"purple"}}
+          >
+          Proceed To CheckOut
+          </button>
+        </div>
+      </div>
+      {islogin &&<Fade right cascade> <Card className="shadow"><CheckOutStepper total={total} cartItems={JSON.stringify(cartItems)} user_name={userInfo.name} id={userInfo._id} user_email={userInfo.email}/></Card></Fade>}
+    </div>
+    )
+}
+    </div>
+  </section>
+    </div>
+        </div>
+    )
+}
+
+export default CartScreen
+
+
+//---------Server-----------//
+
+import express from 'express';
+import dotenv from 'dotenv'
+import config from './config'
+import mongoose from 'mongoose';
+import userRoute from './controllers_routes/userRoutes';
+import productRoute from "./controllers_routes/ProductRoutes";
+import OrdersRoute from "./controllers_routes/OrdersRoutes";
+
+const cors=require("cors");
+const stripe=require("stripe")("sk_test_51HgpgoHSKx3urDTGj55YW9wOfJ8hFTY8XlWKaMiU2UJdLTw2vttCnvkUiTQYkvNDfXsrW8dM60IubU2U9pggIS1L00FSHSfgL2");
+//const uuid=require("uuid");
+const Order=require("./models/OrderModel");
+
+const Products=require("./models/ProductModel");
+const app=express();
+
+dotenv.config();
+app.use(express.json());
+app.use(express.urlencoded({
+    extended:true
+}))
+
+app.use(cors());
+app.use("/api/user/",userRoute);
+app.use("/api/product_manage/",productRoute);
+app.use("/api/orders/",OrdersRoute);
+const mongodbUrl=config.MONGODB_URL;
+mongoose.Promise = global.Promise;
+
+mongoose.connect(mongodbUrl,{
+    useNewUrlParser:true,
+    useCreateIndex:true,
+    useUnifiedTopology:true,
+    useFindAndModify:false
+}).then(()=>{console.log("db connected :)");}).catch(e=>{
+    console.log("Your new error :-",e);
+});
+
+app.get("/api/products",(req,res)=>{
+    res.send(data.products);
+});
+
+app.get("/api/product/:id",async(req,res)=>{
+    try{
+        const productId=req.params.id;
+        const product=await Products.findOne({_id:mongoose.Types.ObjectId(productId)})
+        if(!product) return res.status(404).send({message:"Product Not Found :("});
+        
+        res.status(201).send(product);
+        
+    }catch(e){
+        res.status(400).send({message:"From here"+e.message});
+    }
+});
+
+
+app.post("/api/payment_stripe",(req,res)=>{
+    console.log(req.body);
+    
+    //const idempotencyKey=uuid();
+    
+    return stripe.customer.create({
+        email:req.body.o_customer_email,
+        source:req.body.o_customer_id,
+    }).then(customer=>{
+        stripe.charges.create({
+            amount:req.body.o_total*100,
+            currency:'usd',
+            customer:customer.id,
+            receipt_email:req.body.o_customer_email,
+            description:product.name,
+            shipping:req.body.o_shipping_addr,
+            orderItems:req.body.o_cartItems
+        },{});
+    }).then(async(result)=>{
+        console.log("Into Orders Successfully !");
+        const order=await Order(req.body).save();  
+        
+        //deducting the quantity from database.
+        req.body.o_cartItems.map(async(item)=>{
+            await Products.findOneAndUpdate({_id:item._id},{$inc:{p_quantity:-item.count}});
+        });
+    
+        console.log(result);
+        return res.status(201).send({message:order});
+        
+    }).catch(e=>{
+        res.status(400).send({message:e.message});
+    })
+})
+
+
+
+const port =process.env.PORT || 4000
+app.listen(port,()=>{
+    console.log(`server started on ${port}`);
+})
+
+
+//------------CartAction--------------//
+
+import { ADD_TO_CART, CLEAR_CART, CLEAR_ORDER, CREATE_ORDER, ORDER_ERROR, REMOVE_FROM_CART } from "../constants/cartConstants";
+import axios from "axios";
+export const addToCart=(product,qty)=>(dispatch,getState)=>{
+    const cartItems=getState().cart.cartItems.slice();
+    let alreadyExist=false;
+    cartItems.forEach(x=>{
+        if(x._id===product._id){
+            alreadyExist=true;
+            x.count=x.count+(qty)
+        }
+    });
+    if(!alreadyExist){
+        cartItems.push({...product,count:qty});
+    }
+    dispatch({
+        type:ADD_TO_CART,
+        payload:{cartItems}
+    });
+    
+    localStorage.setItem("cartItems",JSON.stringify(cartItems));
+}
+
+export const removeFromCart=(product)=>(dispatch,getState)=>{
+
+    const cartItems=getState().cart.cartItems.slice().filter((x)=> x._id !==product._id)
+
+    dispatch({
+        type:REMOVE_FROM_CART,
+        payload:{cartItems}
+    })
+    localStorage.setItem("cartItems",JSON.stringify(cartItems));
+}
+
+export const createOrder=(order)=>async(dispatch)=>{
+    try{
+        if(order.o_payment_method==="Stripe"){
+
+            const {data}=await axios.post("/api/payment_stripe",order);
+            console.log("Message from server",data.message);
+
+            
+        dispatch({
+            type:CREATE_ORDER,
+            payload:data.message
+        })
+        localStorage.removeItem("cartItems");
+        dispatch({
+            type:CLEAR_CART,
+        })
+        }else if(order.o_payment_method==="Cash on delivery"){
+            const {data}=await axios.post("/api/orders/",order);
+            console.log("Message from server",data.message);
+
+            
+        dispatch({
+            type:CREATE_ORDER,
+            payload:data.message
+        })
+        localStorage.removeItem("cartItems");
+        dispatch({
+            type:CLEAR_CART,
+        })
+        }
+    }catch(e){
+        dispatch({
+            type:ORDER_ERROR,
+            payload:e.response && e.response.data.message ? e.response.data.message :e.message
+        })
+    }
+}
+
+export const clearOrder=()=>(dispatch)=>{
+    dispatch({
+        type:CLEAR_ORDER
+    });
+}

@@ -1,0 +1,128 @@
+/*Side bar*/
+.sidebar{
+    position:fixed;
+    transform: translateX(-25rem);
+    width: 15rem;
+    z-index: 4;
+    transition: 100ms ease-in-out;
+    height: 91.3%;
+    color: white;
+    background-image: linear-gradient(blueviolet,crimson);
+    transition: 0.5s ease-in-out;
+    padding: 15px 0px;
+  }
+  .sidebar.open{
+    transform: translateX(0);
+  }
+  .sidebar h3{
+    color: whitesmoke;
+    text-transform: uppercase;
+    margin: 0px;
+    font-size:medium;
+    font-family: 'Times New Roman', Times, serif;
+    box-shadow: 0 10px 8px -9px rgba(0,0,0,0.75);
+    text-align: center;
+    margin-bottom: 30px;
+    width: 100%; 
+    transition: 100ms ease-in-out;
+  }
+  .sidebar .sidebar_icon{
+    margin: 0px;
+    margin-right:5px;
+    margin-bottom: 0px;
+  }
+  .sidebar h3:hover{
+    transform: scale(1.07);
+  }
+  .sidebar ul li{
+    padding: 15px;
+    display: flex;
+    padding-left: 0;
+    border-bottom: 1px solid rgba(0,0,0,0.5);
+    list-style-type: none;
+    margin: 0;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    transition: 0.2s ease-in-out;
+    
+  }
+  .sidebar ul li i{
+    margin: 5px;
+  }
+  .sidebar ul li:hover{
+    background-image: linear-gradient(to right,darkblue,blueviolet);
+    border-left: 8px solid darkslategrey;    
+  }
+  .sidebar ul li:hover a{
+    color:white;
+    
+  }
+  .sidebar ul li a{
+    display: block;
+    font-family: 'Times New Roman', Times, serif;
+    color: azure;
+    margin-left: 0px;
+    text-decoration: none;
+  }
+  .sidebar .menu_close_btn{
+  background-color: transparent;
+  border-radius: 50%;   
+  width: 2rem;
+  border: none;
+  height: 1.5rem;
+  padding: 0.2rem;
+  outline-color: none;
+  outline: none;
+  cursor: pointer;
+  color: cyan;
+  position:absolute;
+  right: .5rem;
+  top: .2rem;
+  transition: 100ms ease-in-out;
+  }
+  .sidebar .menu_close_btn:hover{
+    transform:scale(1.07);
+    color: white;
+  }
+  .social_media{
+    bottom: 0px;
+    width: 100%;
+    position: absolute;
+    display: flex;
+    padding-top: 6px;
+    background-image: linear-gradient(to right,black,darkblue);
+    margin:0;
+    line-height: 40px;
+    align-items: center;
+    justify-content: center;
+  
+  }
+  .social_media a i{
+    color: aliceblue;
+  }
+  .social_media button{
+    padding: 1.5px;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+  .social_media a{
+    border-radius: 5px;
+    background: #594f8d;
+    display: flex;
+    flex-direction: row;
+    text-align: center;
+    justify-content: center;
+    padding: 2px;
+    margin: 2px;
+    transition: 100ms ease-in-out;
+  }
+  .social_media .social_app_icon{
+    color: white;
+    margin: 1.5px;
+  }
+  .social_media a:hover{
+    background: blue;
+  }
+  #insta:hover{
+    background-image: linear-gradient(blueviolet,crimson);
+  }
+  /*---Side bar Ends-----*/

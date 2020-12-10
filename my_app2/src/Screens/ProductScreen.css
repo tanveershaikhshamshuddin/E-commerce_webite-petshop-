@@ -1,0 +1,25 @@
+.product_details_action ul{
+    text-decoration: none;
+    list-style-type: none;
+}
+.product_counter button{
+ outline: none;
+ outline-color: none;
+ font-size: 1.2rem;
+ border:none;
+ cursor: pointer;
+}
+.product_counter{
+ left: -1rem;
+}
+.product_counter input{
+ text-align: center;
+}
+.product_details_page{
+ height: 75vh;
+ font-family: 'Times New Roman', Times, serif;
+}
+.details_view img{
+height:70%;
+ border-radius: 1rem;
+}

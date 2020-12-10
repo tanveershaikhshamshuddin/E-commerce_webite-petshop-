@@ -1,0 +1,16 @@
+.search-result{
+    position:absolute;
+    left:12px;
+    top:16px;
+    font-size: 22px;
+    color:purple;
+}
+.list-group-item{
+    cursor: pointer;
+}
+
+.list-group-item.active,
+.list-group-item:hover{
+    background-color: lightgray;
+    color:purple;
+}

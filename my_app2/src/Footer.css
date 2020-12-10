@@ -1,0 +1,12 @@
+
+.footer{
+    position: "absolute";
+    top:50%;
+    bottom:0%;
+    background-image: linear-gradient(to right,black,darkblue,blue,purple);
+    color: white;
+    font-family: 'Times New Roman', Times, serif;
+    text-align: center;
+    padding: 10px;
+    margin: 0;
+  }
